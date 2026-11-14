@@ -2,8 +2,8 @@ name: Check University Plan PDF
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # Sprawdza co 6 godzin
-  workflow_dispatch:      # Pozwala na ręczne uruchomienie w zakładce Actions
+    - cron: '0 */1 * * *'
+  workflow_dispatch:
 
 jobs:
   check-pdf:
@@ -24,6 +24,7 @@ jobs:
         env:
           MAIL_USER: ${{ secrets.MAIL_USER }}
           MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          SCHEDULE_PDF_URL: ${{ secrets.SCHEDULE_PDF_URL }}
         run: python check_plan.py
 
       - name: Commit and push if hash changed

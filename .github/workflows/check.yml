@@ -1,0 +1,33 @@
+name: Check University Plan PDF
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Sprawdza co 6 godzin
+  workflow_dispatch:      # Pozwala na ręczne uruchomienie w zakładce Actions
+
+jobs:
+  check-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run check script
+        env:
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+        run: python check_plan.py
+
+      - name: Commit and push if hash changed
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Automatyczna aktualizacja hasha planu [skip ci]"
+          file_pattern: last_hash.txt

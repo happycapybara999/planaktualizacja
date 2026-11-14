@@ -4,17 +4,20 @@ import smtplib
 from email.message import EmailMessage
 import requests
 
-PDF_URL = "https://san.edu.pl/f/v-psychologia-b.pdf"  # Wklej swój link do PDF
+PDF_URL = os.environ.get("SCHEDULE_PDF_URL")
+SENDER_EMAIL = os.environ.get("MAIL_USER")
+SENDER_PASSWORD = os.environ.get("MAIL_PASS")
+RECEIVER_EMAIL = "maciejpikula@int.pl"
+
 HASH_FILE = "last_hash.txt"
 
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
-SENDER_EMAIL = os.environ.get("MAIL_USER")
-SENDER_PASSWORD = os.environ.get("MAIL_PASS")
-RECEIVER_EMAIL = os.environ.get("MAIL_USER")
 
 
 def get_pdf_hash(url):
+  if not url:
+    raise ValueError("Brak adresu URL pliku PDF w zmiennej SCHEDULE_PDF_URL.")
   response = requests.get(url)
   response.raise_for_status()
   return hashlib.sha256(response.content).hexdigest()
@@ -22,13 +25,13 @@ def get_pdf_hash(url):
 
 def send_email_alert():
   msg = EmailMessage()
-  msg.set_subject("Zaktualizowano plan zajęć na uczelni")
+  msg["Subject"] = "Zaktualizowano plan zajęć na uczelni"
+  msg["From"] = SENDER_EMAIL
+  msg["To"] = RECEIVER_EMAIL
   msg.set_content(
       "Plik PDF na stronie uczelni zmienił się. Sprawdź najnowszą wersję"
       f" planu:\n{PDF_URL}"
   )
-  msg["From"] = SENDER_EMAIL
-  msg["To"] = RECEIVER_EMAIL
 
   with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT) as server:
     server.starttls()

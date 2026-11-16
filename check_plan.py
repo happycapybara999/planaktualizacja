@@ -15,17 +15,42 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 
 
+def send_error_alert(error_message):
+  msg = EmailMessage()
+  msg["Subject"] = "Alert: Problem z linkiem do planu zajęć (Błąd 404)"
+  msg["From"] = SENDER_EMAIL
+  msg["To"] = RECEIVER_EMAIL
+  msg.set_content(
+      f"Skrypt napotkał problem z pobraniem planu – adres URL prawdopodobnie"
+      f" przestał działać lub uległ zmianie.\n\nSzczegóły błędu:\n{error_message}"
+  )
+
+  with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT) as server:
+    server.starttls()
+    server.login(SENDER_EMAIL, SENDER_PASSWORD)
+    server.send_message(msg)
+  print("Wysłano powiadomienie e-mail o błędzie linku.")
+
+
 def get_pdf_hash(url):
   if not url:
     raise ValueError("Brak adresu URL pliku PDF w zmiennej SCHEDULE_PDF_URL.")
+  
   response = requests.get(url)
+  
+  # Jeśli wystąpi błąd 404 lub inny HTTP, wychwytujemy go i wysyłamy powiadomienie
+  if response.status_code == 404:
+    error_msg = f"Otrzymano błąd 404 Not Found dla adresu: {url}"
+    send_error_alert(error_msg)
+    raise requests.exceptions.HTTPError(error_msg)
+    
   response.raise_for_status()
   return hashlib.sha256(response.content).hexdigest()
 
 
 def send_email_alert():
   msg = EmailMessage()
-  msg["Subject"] = "Zaktualizowano plan zajęć na uczelni"
+  msg["Subject"] = "Uwaga – zaktualizowano plan zajęć na uczelni"
   msg["From"] = SENDER_EMAIL
   msg["To"] = RECEIVER_EMAIL
   msg.set_content(
@@ -41,7 +66,11 @@ def send_email_alert():
 
 
 def main():
-  current_hash = get_pdf_hash(PDF_URL)
+  try:
+    current_hash = get_pdf_hash(PDF_URL)
+  except Exception as e:
+    print(f"Pominięto sprawdzanie z powodu błędu: {e}")
+    return
 
   previous_hash = ""
   if os.path.exists(HASH_FILE):
